@@ -92,12 +92,15 @@ function jsonResponse(body: unknown, status = 200) {
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    // Users paste the endpoint with a trailing slash often enough that a 404
+    // there reads as "server down" — normalize it away.
+    const path = url.pathname.replace(/\/+$/, "") || "/";
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
 
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/mcp")) {
+    if (request.method === "GET" && (path === "/" || path === "/mcp")) {
       // Streamable HTTP: a GET asking for an SSE stream must get SSE or 405.
       if ((request.headers.get("accept") ?? "").includes("text/event-stream")) {
         return new Response("SSE not supported; POST JSON-RPC to /mcp", {
@@ -112,7 +115,7 @@ export default {
       );
     }
 
-    if (url.pathname !== "/mcp" && url.pathname !== "/") {
+    if (path !== "/mcp" && path !== "/") {
       return new Response("not found", { status: 404, headers: CORS });
     }
 
