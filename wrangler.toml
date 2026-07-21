@@ -1,0 +1,10 @@
+name = "natural-docs-mcp"
+main = "src/entry/worker.ts"
+compatibility_date = "2025-03-10"
+compatibility_flags = ["nodejs_compat"]
+
+# Stateless Streamable HTTP MCP — no Durable Objects, no KV, no bindings.
+# Docs are fetched live from docs.natural.com and cached in-isolate (15-min TTL).
+
+[observability]
+enabled = true

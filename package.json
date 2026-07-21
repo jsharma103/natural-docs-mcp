@@ -1,0 +1,39 @@
+{
+  "name": "natural-docs-mcp",
+  "version": "0.1.0",
+  "description": "Unofficial MCP server for Natural (natural.com) documentation: search, read pages, and look up API endpoints.",
+  "type": "module",
+  "bin": {
+    "natural-docs-mcp": "dist/entry/node.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/entry/node.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "natural",
+    "payments",
+    "documentation"
+  ],
+  "author": "Jay Sharma",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "minisearch": "^7.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.112.0"
+  }
+}

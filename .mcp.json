@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "natural-docs": {
+      "type": "http",
+      "url": "https://natural-docs-mcp.jsharma103.workers.dev/mcp"
+    }
+  }
+}

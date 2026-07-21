@@ -1,0 +1,17 @@
+{
+  "name": "natural-docs",
+  "owner": {
+    "name": "Jay Sharma",
+    "url": "https://github.com/jsharma103"
+  },
+  "metadata": {
+    "description": "Unofficial documentation tools for Natural (natural.com). Not affiliated with Natural AI, Inc."
+  },
+  "plugins": [
+    {
+      "name": "natural-docs",
+      "source": "./",
+      "description": "Search, read, and look up Natural API documentation from your agent."
+    }
+  ]
+}
