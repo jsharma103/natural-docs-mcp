@@ -83,6 +83,18 @@ ok(
   `lookup_endpoint detail schema shape (len ${led.length})`,
 );
 
+// Exact operationId that is also a prefix of other operationIds (e.g.
+// wallets.list vs wallets.listX) must still hit the single-match detail branch.
+const ledExact = JSON.parse(
+  await call("lookup_endpoint", { query: "wallets.list", detail: true }),
+);
+ok(
+  ledExact.operationId === "wallets.list" &&
+    ledExact.responses &&
+    ledExact.matches === undefined,
+  `lookup_endpoint exact operationId beats prefix collisions`,
+);
+
 await client.close();
 console.log(failures === 0 ? "\nALL GREEN" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

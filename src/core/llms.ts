@@ -61,10 +61,14 @@ export async function parseIndex(): Promise<DocSection[]> {
     }
     const link = line.match(LINK_RE);
     if (link && current) {
+      const slug = link[3].replace(/\/$/, "");
+      // Skip machine artifacts the index links to (openapi.json, llms-full.txt):
+      // they aren't doc pages, so read_doc on them dead-ends.
+      if (/\.(json|txt)$/.test(slug)) continue;
       current.pages.push({
         title: link[1].trim(),
         url: link[2],
-        slug: link[3].replace(/\/$/, ""),
+        slug,
         description: (link[4] ?? "").trim(),
       });
     }

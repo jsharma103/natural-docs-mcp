@@ -51,6 +51,17 @@ async function ensure(): Promise<void> {
 export async function queryOps(q: string): Promise<OpSummary[]> {
   await ensure();
   const s = q.toLowerCase();
+  // Exact matches win: substring matching alone makes prefixes like
+  // "customers.list" ambiguous with "customers.listInvitations", so an exact
+  // operationId / "METHOD /path" / path query would otherwise never reach
+  // detail mode.
+  const exact = ops!.filter(
+    (o) =>
+      (o.operationId ?? "").toLowerCase() === s ||
+      `${o.method} ${o.path}`.toLowerCase() === s ||
+      o.path.toLowerCase() === s,
+  );
+  if (exact.length > 0) return exact;
   return ops!.filter(
     (o) =>
       o.path.toLowerCase().includes(s) ||
