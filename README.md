@@ -106,10 +106,13 @@ npx wrangler deploy   # deploy the Worker
 query (idempotency, payment requests, vault, limits, errors) to surface the right page in
 the top 3.
 
+See [docs/EXAMPLES.md](./docs/EXAMPLES.md) for real request/response transcripts.
+
 ## Limitations
 
-- `lookup_endpoint` detail output is capped at 8000 chars; very large operations can be
-  truncated before their `responses` section. (Roadmap: trim to 2xx + primary error.)
+- `lookup_endpoint` detail returns a representative subset of responses (primary 2xx +
+  one error); other codes are listed under `x-omitted-response-codes`. Output is compact
+  JSON capped at 14000 chars — enough for every current Natural operation.
 - First request after a cold start or cache expiry re-fetches the corpus/spec.
 
 ## License

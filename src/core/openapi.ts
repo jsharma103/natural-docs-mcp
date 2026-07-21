@@ -72,10 +72,36 @@ export async function getOperation(
     tags: op.tags,
     parameters: op.parameters,
     requestBody: op.requestBody,
-    responses: op.responses,
+    responses: trimResponses(op.responses),
   };
   const pruned = prune(picked, 0) as Record<string, unknown>;
   return { method: method.toUpperCase(), path, ...pruned };
+}
+
+// Natural operations enumerate ~13 response codes; serializing them all blows the
+// output cap and buries the useful parts. Keep the primary success (first 2xx) and
+// one representative error (prefer a 4xx, else any non-2xx), and record the rest as
+// an explicit note so nothing is silently dropped.
+function trimResponses(responses: unknown): unknown {
+  if (!responses || typeof responses !== "object") return responses;
+  const all = responses as Record<string, unknown>;
+  const codes = Object.keys(all);
+
+  const success = codes.find((c) => /^2\d\d$/.test(c));
+  const clientErr = codes.find((c) => /^4\d\d$/.test(c));
+  const anyErr = codes.find((c) => !/^2\d\d$/.test(c));
+  const keep = [success, clientErr ?? anyErr].filter(
+    (c): c is string => Boolean(c),
+  );
+
+  const out: Record<string, unknown> = {};
+  for (const c of keep) out[c] = all[c];
+
+  const omitted = codes.filter((c) => !keep.includes(c));
+  if (omitted.length > 0) {
+    out["x-omitted-response-codes"] = omitted.join(", ");
+  }
+  return out;
 }
 
 function resolveRef(ref: string): unknown {

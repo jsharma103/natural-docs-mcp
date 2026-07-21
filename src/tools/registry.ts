@@ -11,7 +11,9 @@ import { queryOps, getOperation } from "../core/openapi.js";
 
 const DOCS_BASE = "https://docs.natural.com";
 const READ_CAP = 40_000;
-const DETAIL_CAP = 8_000;
+// Compact (unindented) endpoint detail runs ~7-12KB across Natural's operations;
+// 14000 fits every one with headroom, so the cap only guards pathological cases.
+const DETAIL_CAP = 14_000;
 
 export interface ToolResult {
   content: { type: "text"; text: string }[];
@@ -138,7 +140,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "lookup_endpoint",
     description:
-      'Look up Natural REST API endpoints from the OpenAPI spec. Query by path fragment, "METHOD /path", or keyword. detail=true on a single match returns pruned parameters/request/response schemas (examples stripped, capped 8000 chars).',
+      'Look up Natural REST API endpoints from the OpenAPI spec. Query by path fragment, "METHOD /path", or keyword. detail=true on a single match returns the pruned operation: parameters, request body, and a representative subset of responses (primary 2xx plus one error; examples stripped, $refs resolved one level, other response codes listed under x-omitted-response-codes).',
     shape: {
       query: z
         .string()
@@ -173,9 +175,9 @@ export const TOOLS: ToolDef[] = [
         if (detail && matches.length === 1) {
           const m = matches[0];
           const op = await getOperation(m.method, m.path);
-          let s = JSON.stringify(op, null, 2);
+          let s = JSON.stringify(op);
           if (s.length > DETAIL_CAP)
-            s = s.slice(0, DETAIL_CAP) + "\n… [truncated]";
+            s = s.slice(0, DETAIL_CAP) + "… [truncated]";
           return text(s);
         }
 
