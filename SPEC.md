@@ -87,7 +87,7 @@ tracked separately in `../natural-trust-audit/BACKLOG.md`; out of scope here.)
   - Multiple matches or `detail=false` → operation list only.
   - Single match + `detail=true` → pruned operation: parameters, request body schema,
     response schemas; `example`/`examples` nodes dropped; `$ref`s resolved one level;
-    output capped at 8k chars.
+    output capped at 14k chars (descriptions dropped first so the JSON stays valid).
 - **Output**: JSON, pruned as above.
 
 ## 6. Architecture — remote-first, adoptable-as-PR

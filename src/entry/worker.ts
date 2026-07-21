@@ -6,7 +6,8 @@
 import { z } from "zod";
 import { TOOLS } from "../tools/registry.js";
 
-const PROTOCOL_VERSION = "2025-03-26";
+const PROTOCOL_VERSION = "2025-06-18";
+const SUPPORTED_VERSIONS = new Set(["2024-11-05", "2025-03-26", "2025-06-18"]);
 const SERVER_INFO = { name: "natural-docs-mcp", version: "0.1.0" };
 const byName = new Map(TOOLS.map((t) => [t.name, t]));
 
@@ -33,17 +34,22 @@ function rpcError(id: unknown, code: number, message: string) {
 async function handleRpc(msg: RpcMessage): Promise<object | null> {
   const { id, method, params } = msg;
 
-  // Notifications (no id, notifications/*) get no response.
-  if (method?.startsWith("notifications/")) return null;
+  // JSON-RPC: a message without an id is a notification — never answered.
+  if (id === undefined || method?.startsWith("notifications/")) return null;
 
   switch (method) {
-    case "initialize":
+    case "initialize": {
+      // Echo the client's version if supported, else offer our latest.
+      const requested = params?.protocolVersion as string | undefined;
       return reply(id, {
         protocolVersion:
-          (params?.protocolVersion as string) ?? PROTOCOL_VERSION,
+          requested && SUPPORTED_VERSIONS.has(requested)
+            ? requested
+            : PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
       });
+    }
 
     case "ping":
       return reply(id, {});
@@ -92,6 +98,13 @@ export default {
     }
 
     if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/mcp")) {
+      // Streamable HTTP: a GET asking for an SSE stream must get SSE or 405.
+      if ((request.headers.get("accept") ?? "").includes("text/event-stream")) {
+        return new Response("SSE not supported; POST JSON-RPC to /mcp", {
+          status: 405,
+          headers: CORS,
+        });
+      }
       return new Response(
         "natural-docs-mcp (unofficial). MCP endpoint: POST /mcp. " +
           "Not affiliated with Natural AI, Inc.",

@@ -6,6 +6,7 @@
 // Sections with no such bullets (the playbook prose) are dropped automatically.
 
 import { fetchText } from "./cache.js";
+import { fetchCorpus } from "./corpus.js";
 
 const INDEX_URL = "https://docs.natural.com/llms.txt";
 const HEADING_RE = /^##\s+(.*)$/;
@@ -24,8 +25,30 @@ export interface DocSection {
   pages: DocPage[];
 }
 
+// Fallback when llms.txt is unreachable or its shape has drifted: derive a flat
+// index from the corpus (llms-full.txt Source: lines).
+async function corpusFallback(): Promise<DocSection[]> {
+  const pages = await fetchCorpus();
+  return [
+    {
+      section: "All pages",
+      pages: pages.map((p) => ({
+        title: p.title,
+        slug: p.slug,
+        url: p.url,
+        description: "",
+      })),
+    },
+  ];
+}
+
 export async function parseIndex(): Promise<DocSection[]> {
-  const text = await fetchText(INDEX_URL);
+  let text: string;
+  try {
+    text = await fetchText(INDEX_URL);
+  } catch {
+    return corpusFallback();
+  }
   const sections: DocSection[] = [];
   let current: DocSection | null = null;
 
@@ -47,5 +70,6 @@ export async function parseIndex(): Promise<DocSection[]> {
     }
   }
 
-  return sections.filter((s) => s.pages.length > 0);
+  const indexed = sections.filter((s) => s.pages.length > 0);
+  return indexed.length > 0 ? indexed : corpusFallback();
 }

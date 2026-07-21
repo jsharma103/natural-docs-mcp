@@ -1,20 +1,22 @@
 // BM25 search over the docs corpus using minisearch (pure JS, Workers-compatible).
-// The index and a slug->page map are built lazily on first use and reused for the
-// isolate/process lifetime.
+// The index and a slug->page map are built lazily on first use and rebuilt once the
+// corpus cache TTL has elapsed, so results track docs updates.
 
 import MiniSearch from "minisearch";
+import { TTL_MS } from "./cache.js";
 import { fetchCorpus, type CorpusPage } from "./corpus.js";
 
 let index: MiniSearch | null = null;
 let bySlug: Map<string, CorpusPage> | null = null;
+let builtAt = 0;
 
 async function ensure(): Promise<void> {
-  if (index && bySlug) return;
+  if (index && bySlug && Date.now() - builtAt < TTL_MS) return;
   const pages = await fetchCorpus();
-  bySlug = new Map();
+  const map = new Map<string, CorpusPage>();
 
   const docs = pages.map((p, id) => {
-    bySlug!.set(p.slug, p);
+    map.set(p.slug, p);
     return { id, title: p.title, body: p.body, slug: p.slug, url: p.url };
   });
 
@@ -25,6 +27,8 @@ async function ensure(): Promise<void> {
   });
   ms.addAll(docs);
   index = ms;
+  bySlug = map;
+  builtAt = Date.now();
 }
 
 export interface Hit {

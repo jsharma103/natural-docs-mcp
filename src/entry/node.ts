@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Node stdio entry — the offline/air-gapped fallback and the local test target.
 // The primary deployment is the Cloudflare Worker (entry/worker.ts, added at M2).
 

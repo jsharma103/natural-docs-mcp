@@ -57,9 +57,13 @@ ok(
   `read_doc payments (len ${rd.length})`,
 );
 
-// read_doc fallback path (bad slug should still not crash; either md or error text)
+// read_doc fallback path (bad slug: no crash, and a helpful not-found message
+// that points at list_docs/search_docs rather than advising a retry)
 const rdBad = await call("read_doc", { page: "guides/concepts/does-not-exist" });
-ok(typeof rdBad === "string" && rdBad.length > 0, `read_doc bad slug handled`);
+ok(
+  /no documentation page/i.test(rdBad) && /search_docs/.test(rdBad),
+  `read_doc bad slug helpful error`,
+);
 
 // lookup_endpoint — list mode
 const le = JSON.parse(await call("lookup_endpoint", { query: "payments" }));
@@ -72,8 +76,8 @@ const led = await call("lookup_endpoint", {
   query: "payments.create",
   detail: true,
 });
-// "parameters" is a detail-only key (list mode never emits it). Note: for large
-// operations the 8k cap can truncate before "responses" — tracked for M4.
+// "parameters" is a detail-only key (list mode never emits it). Oversized
+// operations degrade to valid JSON (descriptions dropped) under the 14k cap.
 ok(
   /"parameters"/.test(led) && led.length > 1000,
   `lookup_endpoint detail schema shape (len ${led.length})`,

@@ -39,7 +39,9 @@ function text(obj: unknown): ToolResult {
 function errText(e: unknown): ToolResult {
   const msg =
     e instanceof HttpError
-      ? `Natural docs unreachable (HTTP ${e.status}) for ${e.url}. Retry shortly.`
+      ? e.status === 404
+        ? `Not found (HTTP 404): ${e.url}. Check the slug via list_docs or search_docs.`
+        : `Natural docs unreachable (HTTP ${e.status}) for ${e.url}. Retry shortly.`
       : `Natural docs unreachable: ${(e as Error).message}. Retry shortly.`;
   return { content: [{ type: "text", text: msg }], isError: true };
 }
@@ -118,6 +120,7 @@ export const TOOLS: ToolDef[] = [
       const page = args.page as string;
       const slug = page
         .replace(/^https?:\/\/docs\.natural\.com\//, "")
+        .replace(/[?#].*$/, "")
         .replace(/\.md$/, "")
         .replace(/^\/+|\/+$/g, "");
       try {
@@ -126,7 +129,17 @@ export const TOOLS: ToolDef[] = [
           md = await fetchText(`${DOCS_BASE}/${slug}.md`);
         } catch {
           const p = await getCorpusPage(slug);
-          if (!p) throw new Error(`no page for slug "${slug}"`);
+          if (!p) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `No documentation page for slug "${slug}". Use list_docs or search_docs to find valid pages.`,
+                },
+              ],
+              isError: true,
+            };
+          }
           md = `# ${p.title}\n\n${p.body}`;
         }
         const capped =
@@ -176,6 +189,15 @@ export const TOOLS: ToolDef[] = [
           const m = matches[0];
           const op = await getOperation(m.method, m.path);
           let s = JSON.stringify(op);
+          if (s.length > DETAIL_CAP) {
+            // Degrade to valid JSON rather than slicing mid-document: drop field
+            // descriptions first; the raw slice is a last resort.
+            const slim = JSON.parse(
+              JSON.stringify(op, (k, v) => (k === "description" ? undefined : v)),
+            ) as Record<string, unknown>;
+            slim["x-note"] = "field descriptions omitted to fit the detail cap";
+            s = JSON.stringify(slim);
+          }
           if (s.length > DETAIL_CAP)
             s = s.slice(0, DETAIL_CAP) + "… [truncated]";
           return text(s);
@@ -184,6 +206,11 @@ export const TOOLS: ToolDef[] = [
         return text({
           query,
           count: matches.length,
+          ...(detail && matches.length > 1
+            ? {
+                note: "detail requested but the query matched several operations; narrow to one (e.g. by operationId) for the full schema",
+              }
+            : {}),
           matches: matches.map((m) => ({
             method: m.method,
             path: m.path,

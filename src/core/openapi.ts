@@ -2,7 +2,7 @@
 // operations index, and prune a single operation on demand: examples stripped,
 // $refs resolved one level so the schema is self-contained but not infinitely deep.
 
-import { fetchJson } from "./cache.js";
+import { evict, fetchJson, TTL_MS } from "./cache.js";
 
 const SPEC_URL = "https://docs.natural.com/api-reference/openapi.json";
 const METHODS = ["get", "post", "put", "patch", "delete", "head", "options"];
@@ -22,10 +22,15 @@ export interface OpSummary {
 
 let spec: Spec | null = null;
 let ops: OpSummary[] | null = null;
+let builtAt = 0;
 
 async function ensure(): Promise<void> {
-  if (spec && ops) return;
+  if (spec && ops && Date.now() - builtAt < TTL_MS) return;
   spec = await fetchJson<Spec>(SPEC_URL);
+  // The parsed spec is retained (getOperation and resolveRef need paths +
+  // components); evict the ~6.8MB raw string so it isn't held twice.
+  evict(SPEC_URL);
+  builtAt = Date.now();
   ops = [];
   for (const [path, item] of Object.entries(spec.paths)) {
     for (const method of METHODS) {

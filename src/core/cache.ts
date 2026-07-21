@@ -2,7 +2,7 @@
 // each source (llms.txt, llms-full.txt, openapi.json, per-page .md) is fetched at
 // most once per TTL window per isolate/process.
 
-const TTL_MS = 15 * 60 * 1000;
+export const TTL_MS = 15 * 60 * 1000;
 
 interface Entry {
   at: number;
@@ -21,8 +21,17 @@ export class HttpError extends Error {
   }
 }
 
+// Callers that keep their own parsed copy (e.g. the OpenAPI module) evict the raw
+// text so the same bytes aren't held twice.
+export function evict(url: string): void {
+  store.delete(url);
+}
+
 export async function fetchText(url: string): Promise<string> {
   const now = Date.now();
+  for (const [k, v] of store) {
+    if (now - v.at >= TTL_MS) store.delete(k);
+  }
   const hit = store.get(url);
   if (hit && now - hit.at < TTL_MS) return hit.value;
 
